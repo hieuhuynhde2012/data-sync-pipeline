@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\PC\Desktop\Sysnc-Data\venv2
+set VIRTUAL_ENV=C:\Users\PC\Desktop\data-sync-pipeline\venv2
 
 if not defined PROMPT set PROMPT=$P$G
 

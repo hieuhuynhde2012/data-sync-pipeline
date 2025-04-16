@@ -1,4 +1,4 @@
-#!c:\users\pc\desktop\sysnc-data\venv2\scripts\python.exe
+#!c:\users\pc\desktop\data-sync-pipeline\venv2\scripts\python.exe
 
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
