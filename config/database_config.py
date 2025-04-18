@@ -21,7 +21,7 @@ class MySQLConfig(DatabaseConfig):
     user: str
     password: str
     port: int
-    database: str
+    # database: str
     
 @dataclass
 class RedisConfig(DatabaseConfig):
@@ -47,7 +47,7 @@ def get_database_config() -> Dict[str, DatabaseConfig]:
         user=os.getenv("MYSQL_USER"),
         password=os.getenv("MYSQL_PASSWORD"),
         port=int(os.getenv("MYSQL_PORT")),
-        database=os.getenv("MYSQL_DATABASE"),
+        # database=os.getenv("MYSQL_DATABASE"),
     ),
     "redis": RedisConfig(
         host=os.getenv("REDIS_HOST"),
