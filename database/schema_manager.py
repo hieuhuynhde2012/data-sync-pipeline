@@ -78,3 +78,29 @@ def validate_mysql_schema(cursor):
         return False
     
     print("Validated shema in MySQL.")
+    
+
+#Redis
+def create_redis_schema(client):
+    try: 
+        client.flushdb()
+        client.set("user:1:login", "test_user")
+        client.set("user:1:gravatar_id", "test_gravatar")
+        client.set("user:1:avatar_url", "http://example.com/avatar.jpg")
+        client.set("user:1:url", "http://example.com/user")
+        client.sadd("user_id", "user:1")
+        print("Redis schema created successfully.")
+    except Exception as e:
+        raise Exception(f"Error creating Redis schema: {e}")
+    
+    
+def validate_redis_schema(client):
+    if not client.get("user:1:login") == "test_user":
+        raise ValueError("Value login not found in Redis")  
+    
+    if not client.sismember("user_id", "user:1"):
+        raise ValueError("user_id not found in Redis")
+    
+    print("Validated schema in Redis.")
+    
+     

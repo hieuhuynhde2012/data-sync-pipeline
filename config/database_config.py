@@ -52,9 +52,9 @@ def get_database_config() -> Dict[str, DatabaseConfig]:
     "redis": RedisConfig(
         host=os.getenv("REDIS_HOST"),
         port=int(os.getenv("REDIS_PORT")),
+        user=os.getenv("REDIS_USER"),
         password=os.getenv("REDIS_PASSWORD"),
         database=os.getenv("REDIS_DB"),
-        user=os.getenv("REDIS_USER"),
     )
 }
 
