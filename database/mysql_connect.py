@@ -2,13 +2,15 @@ import mysql.connector
 from mysql.connector import Error
 
 class MySQLConnect:
-    def __init__(self, host, port, user, password):
+    def __init__(self, host, port, user, password,database=None):
         self.config = {
             'host': host,
             'user': user,
             'port': port,
             'password': password,
         }
+        if database:
+            self.config['database'] = database
         self.connection = None
         self.cursor = None
         

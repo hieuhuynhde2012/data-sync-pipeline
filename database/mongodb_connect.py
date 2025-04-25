@@ -5,8 +5,8 @@ import os
 
 # Append the root directory to sys.path (1 level up from current file)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from database.schema_manager import create_mongodb_schema, validate_mongodb_schema
-from config.database_config import get_database_config
+
+
 #step 1: def(get mongo config)
 #Step 2: def(connect)
 #step 3: def(disconnect)

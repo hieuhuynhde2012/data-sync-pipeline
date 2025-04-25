@@ -21,7 +21,19 @@ class MySQLConfig(DatabaseConfig):
     user: str
     password: str
     port: int
-    # database: str
+    database: str
+
+    @property
+    def jdbc_url(self) -> str:
+        return f"jdbc:mysql://{self.host}:{self.port}/{self.database}"
+
+    @property
+    def connection_properties(self) -> Dict[str, str]:
+        return {
+            "user": self.user,
+            "password": self.password,
+            "driver": "com.mysql.cj.jdbc.Driver",
+        }
     
 @dataclass
 class RedisConfig(DatabaseConfig):
@@ -36,32 +48,39 @@ class RedisConfig(DatabaseConfig):
 
 def get_database_config() -> Dict[str, DatabaseConfig]:
         load_dotenv()
-        
+
+        mysql_config = MySQLConfig(
+            host=os.getenv("MYSQL_HOST"),
+            user=os.getenv("MYSQL_USER"),
+            password=os.getenv("MYSQL_PASSWORD"),
+            port=int(os.getenv("MYSQL_PORT")),
+            database=os.getenv("MYSQL_DATABASE"),
+        )
+
         config = {
     "mongodb": MongoDBConfig(
         uri=os.getenv("MONGO_URI"),
         db_name=os.getenv("MONGO_DB_NAME"),
     ),
-    "mysql": MySQLConfig(
-        host=os.getenv("MYSQL_HOST"),
-        user=os.getenv("MYSQL_USER"),
-        password=os.getenv("MYSQL_PASSWORD"),
-        port=int(os.getenv("MYSQL_PORT")),
-        # database=os.getenv("MYSQL_DATABASE"),
-    ),
+    "mysql": mysql_config,
     "redis": RedisConfig(
         host=os.getenv("REDIS_HOST"),
         port=int(os.getenv("REDIS_PORT")),
         user=os.getenv("REDIS_USER"),
         password=os.getenv("REDIS_PASSWORD"),
         database=os.getenv("REDIS_DB"),
-    )
+    ),
+    "jdbc": {
+        "url": mysql_config.jdbc_url,
+        "properties": mysql_config.connection_properties,
+    }
 }
 
         
         for db, setting in config.items():
-            print(f"Config for {db}: {setting}")
-            setting.validate()
+            if isinstance(setting, DatabaseConfig):
+                print(f"Config for {db}: {setting}")
+                setting.validate()
         
         return config
     

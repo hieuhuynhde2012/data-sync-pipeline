@@ -6,7 +6,7 @@ CREATE TABLE Users (
     url VARCHAR(255)
 );
 CREATE TABLE Repositories (
-    repo_id BIGINT PRIMARY KEY,
+    repo_id BIGINT not null ,
     name VARCHAR(255) NOT NULL,
     url VARCHAR(255) NOT NULL
 );
