@@ -17,12 +17,14 @@ def main():
     db_config = get_database_config()
 
     jars = [
-        r"C:\Users\PC\Desktop\data-sync-pipeline\lib\mysql-connector-j-9.2.0.jar"
+        r"C:\Users\PC\Desktop\data-sync-pipeline\lib\mysql-connector-j-9.2.0.jar",
+        r"C:\Users\PC\Desktop\data-sync-pipeline\lib\mongo-spark-connector_2.12-3.0.1.jar"
 
     ]
 
     spark_conf = {
         "spark.jar.packages": "mysql:mysql-connector-java:9.2.0",
+        "spark.jars.packages": "org.mongodb.spark:mongo-spark-connector_2.12:3.0.1"
     }
 
     spark_write_databases = SparkConnect(
@@ -91,6 +93,14 @@ def main():
         mode="append",
         primary_key="repo_id",
         ignore_duplicates=True
+    )
+
+    # Ghi vào MongoDB
+    df_write.spark_write_mongodb(
+        df_write_table_Users,
+        database_name="github_data",
+        collection_name="Users",
+        mode="append"
     )
 
 

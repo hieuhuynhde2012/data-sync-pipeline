@@ -13,6 +13,7 @@ class SparkWriteDatabases:
         self.db_config = db_config
         self.mysql_config = db_config["mysql"]
         self.jdbc_config = db_config["jdbc"]
+        self.mongodb_config = db_config["mongodb"]
         
     def spark_write_mysql(self, df: DataFrame, table_name: str, mode: str = "append"):
         try:
@@ -73,41 +74,18 @@ class SparkWriteDatabases:
             .save()
 
         print(f"Data written to MySQL table {table_name} successfully.")
-    #
-    # def spark_write_mysql(self, df: DataFrame, table_name: str, mode: str = "append", primary_key: str = None,
-    #                       ignore_duplicates: bool = False):
-    #     try:
-    #         mysql_client = MySQLConnect(**self.mysql_config.__dict__)
-    #         mysql_client.connect()
-    #         mysql_client.close()
-    #     except Exception as e:
-    #         raise Exception(f"Error connecting to MySQL: {e}")
-    #
-    #     if ignore_duplicates and primary_key:
-    #         # Thực hiện ghi dữ liệu trực tiếp với chế độ "append"
-    #         # MySQL sẽ xử lý ON DUPLICATE KEY UPDATE
-    #         df.write \
-    #             .format("jdbc") \
-    #             .option("url", self.jdbc_config["url"]) \
-    #             .option("dbtable", table_name) \
-    #             .option("user", self.mysql_config.user) \
-    #             .option("password", self.mysql_config.password) \
-    #             .option("driver", "com.mysql.cj.jdbc.Driver") \
-    #             .mode("append") \
-    #             .save()
-    #
-    #         print(f"Data written to MySQL table {table_name} successfully.")
-    #     else:
-    #         # Nếu không cần xử lý trùng lặp, ghi dữ liệu vào MySQL
-    #         df.write \
-    #             .format("jdbc") \
-    #             .option("url", self.jdbc_config["url"]) \
-    #             .option("dbtable", table_name) \
-    #             .option("user", self.mysql_config.user) \
-    #             .option("password", self.mysql_config.password) \
-    #             .option("driver", "com.mysql.cj.jdbc.Driver") \
-    #             .mode(mode) \
-    #             .save()
-    #
-    #         print(f"Data written to MySQL table {table_name} successfully.")
+
+    def spark_write_mongodb(self, df: DataFrame, database_name: str, collection_name: str, mode: str = "append"):
+        try:
+            df.write \
+                .format("mongo") \
+                .mode(mode) \
+                .option("uri", self.mongodb_config.uri) \
+                .option("database", database_name) \
+                .option("collection", collection_name) \
+                .save()
+            print(f"Data written to MongoDB collection {collection_name} successfully.")
+        except Exception as e:
+            raise Exception(f"Error connecting to MongoDB: {e}")
+
 

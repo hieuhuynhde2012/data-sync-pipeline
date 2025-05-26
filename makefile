@@ -16,3 +16,4 @@ redis-cli -h 127.0.0.1 -a 789
 AUTH redis 789
 PING
 ACL LIST
+db.Users.find().pretty()

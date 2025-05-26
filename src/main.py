@@ -11,22 +11,22 @@ from database.redis_connect import RedisConnect
 
 def main(config):
    
-    # with MongoDBConnect(config["mongodb"].uri, config["mongodb"].db_name) as mongo_client:
-    #     if mongo_client is None:
-    #         print("Failed to connect to MongoDB. Exiting.")
-    #         return
-    #     # Create MongoDB schema
-    #     create_mongodb_schema(mongo_client)
-    #     mongo_client.Users.insert_one({
-    #         "user_id": 1,
-    #         "login": "test_user",
-    #         "gravatar_id": "test_gravatar",
-    #         "avatar_url": "http://example.com/avatar.jpg",
-    #         "url": "http://example.com/user"
-    #     })
-    #     print("Sample data inserted into MongoDB.")
-    #     validate_mongodb_schema(mongo_client)
-    #
+    with MongoDBConnect(config["mongodb"].uri, config["mongodb"].db_name) as mongo_client:
+        if mongo_client is None:
+            print("Failed to connect to MongoDB. Exiting.")
+            return
+        # Create MongoDB schema
+        create_mongodb_schema(mongo_client)
+        mongo_client.Users.insert_one({
+            "user_id": 1,
+            "login": "test_user",
+            "gravatar_id": "test_gravatar",
+            "avatar_url": "http://example.com/avatar.jpg",
+            "url": "http://example.com/user"
+        })
+        print("Sample data inserted into MongoDB.")
+        validate_mongodb_schema(mongo_client)
+
     
     # #MySQL
     with MySQLConnect(config["mysql"].host, config["mysql"].port, config["mysql"].user, config["mysql"].password) as mysql_client:
@@ -37,11 +37,11 @@ def main(config):
         print("Sample data inserted into MySQL.")
         validate_mysql_schema(cursor)
     
-    with RedisConnect(config["redis"].host, config["redis"].port, config["redis"].user, config["redis"].password, config["redis"].database) as redis_client:
-        # print(config["redis"])
-        # redis_client.connect()
-        create_redis_schema(redis_client.connect())
-        validate_redis_schema(redis_client.connect())
+    # with RedisConnect(config["redis"].host, config["redis"].port, config["redis"].user, config["redis"].password, config["redis"].database) as redis_client:
+    #     # print(config["redis"])
+    #     # redis_client.connect()
+    #     create_redis_schema(redis_client.connect())
+    #     validate_redis_schema(redis_client.connect())
 
     
 if __name__ == "__main__":
