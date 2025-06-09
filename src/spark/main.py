@@ -8,7 +8,7 @@
 from config.spark_config import SparkConnect
 from config.database_config import get_database_config
 from pyspark.sql.types import *
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, lit
 
 from src.spark.spark_write_data import SparkWriteDatabases
 
@@ -72,36 +72,55 @@ def main():
 
     df_write = SparkWriteDatabases(spark_write_databases, db_config)
     # Prepare DataFrame with columns matching Users table schema
-    df_write_table_Users = df.select(
-        df.actor.id.alias("user_id"),  # Rename to match table
+    df_write_table_Users = df.withColumn('spark_temp', lit('sparkwrite')).select(
+        df.actor.id.alias("user_id"),
         df.actor.login.alias("login"),
         df.actor.gravatar_id.alias("gravatar_id"),
         df.actor.url.alias("url"),
-        df.actor.avatar_url.alias("avatar_url")
-    ).distinct().repartition(1)  # Ensure unique rows and single partition
+        df.actor.avatar_url.alias("avatar_url"),
+        col("spark_temp"),
+    ).distinct().repartition(1)
 
     # Verify DataFrame schema
     print("DataFrame schema for Users:")
-    # df_write_table_Users.printSchema()
-    # df_write_table_Users.show()
+    df_write_table_Users.printSchema()
+    df_write_table_Users.show()
     df_write_table_Respository.printSchema()
     df_write_table_Respository.show()
 
+    # df_write.spark_write_mysql(
+    #     df_write_table_Respository,
+    #     table_name="Repositories",
+    #     mode="append",
+    #     primary_key="repo_id",
+    #     ignore_duplicates=True
+    # )
+    #
     df_write.spark_write_mysql(
-        df_write_table_Respository,
-        table_name="Repositories",
+        df_write_table_Users,
+        table_name="Users",
         mode="append",
-        primary_key="repo_id",
+        primary_key="user_id",
         ignore_duplicates=True
     )
 
-    # Ghi vào MongoDB
-    df_write.spark_write_mongodb(
-        df_write_table_Users,
-        database_name="github_data",
-        collection_name="Users",
-        mode="append"
+    # write_count = df_write_table_Users.count()
+    # print(f"Tổng số bản ghi đã ghi vào MySQL: {write_count}")
+
+    df_validate = df_write.validate_spark_mysql(
+        table_name="Users",
+        df_write=df_write_table_Users,
+        jdbc_url=db_config["jdbc"]["url"],
+        config=db_config["jdbc"]["properties"]
     )
+
+    # Ghi vào MongoDB
+    # df_write.spark_write_mongodb(
+    #     df_write_table_Users,
+    #     database_name="github_data",
+    #     collection_name="Users",
+    #     mode="append"
+    # )
 
 
 
