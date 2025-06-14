@@ -1,6 +1,9 @@
+from dns.e164 import query
 from pyspark.sql import DataFrame, SparkSession
 import sys
 import os
+
+from pyspark.sql.functions import col
 
 # Append the root directory to sys.path (1 level up from current file)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -66,19 +69,62 @@ class SparkWriteDatabases:
 
         print(f"Data written to MySQL table {table_name} successfully.")
 
-    def validate_spark_mysql(self, df_write: DataFrame, table_name: str, jdbc_url: str, config: Dict):
+    def validate_spark_mysql(self, df_write: DataFrame, table_name: str, jdbc_url: str, config: Dict, mode: str = "append"):
         df_read = self.spark.read \
             .format("jdbc") \
             .option("url", jdbc_url) \
-            .option("driver","com.mysql.cj.jdbc.Driver") \
+            .option("driver", "com.mysql.cj.jdbc.Driver") \
             .option("dbtable", f"(SELECT * FROM {table_name} WHERE spark_temp = 'sparkwrite') AS subq") \
             .option("user", config["user"]) \
             .option("password", config["password"]) \
             .load()
-        # df_read.show()
-        # print(f"Data validated successfully with {df_read.count()} rows.")
+
+        # print("Schema from MySQL:")
+        # df_read.printSchema()
+        # print("Schema from Spark write:")
+        # df_write.printSchema()
+        #
+        # print("Sample data from MySQL:")
+        # df_read.show(truncate=False)
+        # print("Sample data from Spark write:")
+        # df_write.show(truncate=False)
+
+        def subtract_dataframe(df_spark_write: DataFrame, df_read_database: DataFrame):
+            df_read_aligned = df_read_database.select(df_spark_write.columns)
+            result = df_spark_write.exceptAll(df_read_aligned)
+            result.show()
+            print(f"finding {result.count()} rows missing ")
+            if not result.isEmpty():
+                result.write \
+                    .format("jdbc") \
+                    .option("url", self.jdbc_config["url"]) \
+                    .option("dbtable", table_name) \
+                    .option("user", self.mysql_config.user) \
+                    .option("password", self.mysql_config.password) \
+                    .option("driver", "com.mysql.cj.jdbc.Driver") \
+                    .mode(mode) \
+                    .save()
+
         if df_write.count() == df_read.count():
-            print(f"Vaidation record successfully for {table_name} with {df_read.count()} rows.")
+            print(f"Validation record successfully for {table_name} with {df_read.count()} rows.")
+            subtract_dataframe(df_write, df_read)
+            print("Validation record successfully completed.")
+        else:
+            subtract_dataframe(df_write, df_read)
+            print(f"Insert missing records successfully by using spark")
+        try:
+            with MySQLConnect(**self.mysql_config.__dict__) as mysql_client:
+                connection, cursor = mysql_client.connection, mysql_client.cursor
+                database = "github_data"
+                connection.database = database
+                cursor.execute(f"ALTER TABLE {table_name} DROP COLUMN spark_temp")
+                connection.commit()
+                mysql_client.close()
+                print("Drop column spark_temp to MySQL.")
+        except Exception as e:
+            raise Exception(f"-----------------Fail to connect Mysql database: {e}")
+
+
 
     def spark_write_mongodb(self, df: DataFrame, database_name: str, collection_name: str, mode: str = "append"):
         try:
@@ -92,5 +138,53 @@ class SparkWriteDatabases:
             print(f"Data written to MongoDB collection {collection_name} successfully.")
         except Exception as e:
             raise Exception(f"Error connecting to MongoDB: {e}")
+
+
+    def validate_spark_mongodb(self, df_write: DataFrame, uri: str, database_name: str, collection_name: str, mode: str = "append"):
+        query = {"spark_temp": "sparkwrite"}
+        df_read = self.spark.read \
+            .format("mongo") \
+            .option("uri", uri) \
+            .option("database", database_name) \
+            .option("collection", collection_name) \
+            .option("pipeline", str([{"$match": query}])) \
+            .load()
+
+        df_read = df_read.select(
+            col("user_id"),
+            col("login"),
+            col("gravatar_id"),
+            col("url"),
+            col("avatar_url"),
+            col("spark_temp"),
+            )
+        # df_read.show()
+        # print(f"---------{df_read.count()} -------")
+
+
+        def subtract_dataframe(df_spark_write: DataFrame, df_read_database: DataFrame):
+            df_read_aligned = df_read_database.select(df_spark_write.columns)
+            result = df_spark_write.exceptAll(df_read_aligned)
+            result.show()
+            print(f"finding {result.count()} rows missing ")
+            if not result.isEmpty():
+                result.write \
+                    .format("mongo") \
+                    .option("uri", uri) \
+                    .option("database", database_name) \
+                    .option("collection", collection_name) \
+                    .option("mode", mode) \
+                    .save()
+        print(f"---df_write count : {df_write.count()} --- df_read_count : {df_read.count()}")
+        df_read.printSchema()
+        df_write.printSchema()
+        if df_write.count() == df_read.count():
+            print(f"Validation record successfully for {collection_name} with {df_read.count()} rows.")
+            subtract_dataframe(df_write, df_read)
+            print("Validation record successfully completed.")
+        else:
+            # subtract_dataframe(df_write, df_read)
+            print(f"Insert missing records successfully by using spark")
+
 
 

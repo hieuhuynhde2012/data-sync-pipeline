@@ -33,7 +33,7 @@ def validate_mongodb_schema(db):
     if "Users" not in collections:
         print("Users collection does not exist.")
         return False 
-    user = db.Users.find_one({"user_id": 2})
+    user = db.Users.find_one({"user_id": 1})
     if user is None:
         print("Users collection is empty.")
         return False   
