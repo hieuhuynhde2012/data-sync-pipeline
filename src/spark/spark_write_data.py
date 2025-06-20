@@ -10,6 +10,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from database.schema_manager import create_mongodb_schema, validate_mongodb_schema, create_mysql_schema, validate_mysql_schema, create_redis_schema, validate_redis_schema
 from typing import Dict
 from database.mysql_connect import MySQLConnect
+from config.database_config import get_database_config
+from database.mongodb_connect import MongoDBConnect
+
 class SparkWriteDatabases:
     def __init__(self, spark: SparkSession, db_config: Dict):
         self.spark = spark
@@ -139,52 +142,58 @@ class SparkWriteDatabases:
         except Exception as e:
             raise Exception(f"Error connecting to MongoDB: {e}")
 
-
-    def validate_spark_mongodb(self, df_write: DataFrame, uri: str, database_name: str, collection_name: str, mode: str = "append"):
+    def validate_spark_mongodb(self, df_write: DataFrame, uri: str, database_name: str, collection_name: str,
+                               mode: str = "append"):
         query = {"spark_temp": "sparkwrite"}
+
         df_read = self.spark.read \
             .format("mongo") \
             .option("uri", uri) \
             .option("database", database_name) \
             .option("collection", collection_name) \
             .option("pipeline", str([{"$match": query}])) \
-            .load()
-
-        df_read = df_read.select(
+            .load() \
+            .select(
             col("user_id"),
             col("login"),
             col("gravatar_id"),
             col("url"),
             col("avatar_url"),
             col("spark_temp"),
-            )
-        # df_read.show()
-        # print(f"---------{df_read.count()} -------")
+        )
 
+        df_write = df_write.cache()
+        df_read = df_read.cache()
 
-        def subtract_dataframe(df_spark_write: DataFrame, df_read_database: DataFrame):
-            df_read_aligned = df_read_database.select(df_spark_write.columns)
-            result = df_spark_write.exceptAll(df_read_aligned)
-            result.show()
-            print(f"finding {result.count()} rows missing ")
-            if not result.isEmpty():
-                result.write \
-                    .format("mongo") \
-                    .option("uri", uri) \
-                    .option("database", database_name) \
-                    .option("collection", collection_name) \
-                    .option("mode", mode) \
-                    .save()
+        df_read_aligned = df_read.select(df_write.columns)
+        result = df_write.exceptAll(df_read_aligned)
+        result.show()
+        missing_count = result.count()
+
         print(f"---df_write count : {df_write.count()} --- df_read_count : {df_read.count()}")
         df_read.printSchema()
         df_write.printSchema()
-        if df_write.count() == df_read.count():
+
+        if missing_count == 0:
             print(f"Validation record successfully for {collection_name} with {df_read.count()} rows.")
-            subtract_dataframe(df_write, df_read)
-            print("Validation record successfully completed.")
         else:
-            # subtract_dataframe(df_write, df_read)
-            print(f"Insert missing records successfully by using spark")
+            print(f"finding {missing_count} rows missing ")
+            result.write \
+                .format("mongo") \
+                .option("uri", uri) \
+                .option("database", database_name) \
+                .option("collection", collection_name) \
+                .mode(mode) \
+                .save()
+            print("Validation record successfully completed.")
+        self.spark.stop()
+
+        #drop column spark_temp in mongodb use python
+        config = get_database_config()
+        with MongoDBConnect(config["mongodb"].uri,
+                            config["mongodb"].db_name) as db:
+            db["Users"].update_many({}, {"$unset": {"spark_temp": ""}})
+        print(f"Completed validation after drop spark_temp")
 
 
 

@@ -85,5 +85,5 @@ def get_database_config() -> Dict[str, DatabaseConfig]:
         return config
     
     
-a = get_database_config()
-print(a)    
+# a = get_database_config()
+# print(a)
